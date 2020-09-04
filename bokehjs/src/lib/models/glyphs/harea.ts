@@ -79,7 +79,7 @@ export class HAreaView extends AreaView {
 
     if (hittest.point_in_poly(geometry.sx, geometry.sy, sx, sy)) {
       result.add_to_selected_glyphs(this.model)
-      result.get_view = () => this
+      result.view = this
     }
 
     return result
@@ -124,9 +124,9 @@ export class HArea extends Area {
     this.prototype.default_view = HAreaView
 
     this.define<HArea.Props>({
-      x1: [ p.CoordinateSpec ],
-      x2: [ p.CoordinateSpec ],
-      y:  [ p.CoordinateSpec ],
+      x1: [ p.XCoordinateSpec, {field: "x1"} ],
+      x2: [ p.XCoordinateSpec, {field: "x2"} ],
+      y:  [ p.YCoordinateSpec, {field: "y"}  ],
     })
   }
 }

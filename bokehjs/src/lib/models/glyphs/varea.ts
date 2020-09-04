@@ -85,7 +85,7 @@ export class VAreaView extends AreaView {
 
     if (hittest.point_in_poly(geometry.sx, geometry.sy, sx, sy)) {
       result.add_to_selected_glyphs(this.model)
-      result.get_view = () => this
+      result.view = this
     }
 
     return result
@@ -124,9 +124,9 @@ export class VArea extends Area {
     this.prototype.default_view = VAreaView
 
     this.define<VArea.Props>({
-      x:  [ p.CoordinateSpec ],
-      y1: [ p.CoordinateSpec ],
-      y2: [ p.CoordinateSpec ],
+      x:  [ p.XCoordinateSpec, {field: "x"}  ],
+      y1: [ p.YCoordinateSpec, {field: "y1"} ],
+      y2: [ p.YCoordinateSpec, {field: "y2"} ],
     })
   }
 }

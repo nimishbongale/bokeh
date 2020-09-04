@@ -1,5 +1,5 @@
 import {CartesianFrame} from "../canvas/cartesian_frame"
-import {Canvas, CanvasView, FrameBox} from "../canvas/canvas"
+import {Canvas, CanvasView, FrameBox, CanvasLayer} from "../canvas/canvas"
 import {Range} from "../ranges/range"
 import {DataRange1d, Bounds} from "../ranges/data_range1d"
 import {Renderer, RendererView} from "../renderers/renderer"
@@ -861,12 +861,12 @@ export class PlotView extends LayoutDOMView {
       if (interactive_duration >= 0 && interactive_duration < this.model.lod_interval) {
         setTimeout(() => {
           if (document.interactive_duration() > this.model.lod_timeout) {
-            document.interactive_stop(this.model)
+            document.interactive_stop()
           }
           this.request_paint()
         }, this.model.lod_timeout)
       } else
-        document.interactive_stop(this.model)
+        document.interactive_stop()
     }
 
     for (const [, renderer_view] of this.renderer_views) {
@@ -952,7 +952,7 @@ export class PlotView extends LayoutDOMView {
       renderer_view.render()
       ctx.restore()
 
-      if (renderer_view.has_webgl) {
+      if (renderer_view.has_webgl && renderer_view.needs_webgl_blit) {
         this.canvas_view.blit_webgl(ctx)
         this.canvas_view.clear_webgl()
       }
@@ -995,8 +995,21 @@ export class PlotView extends LayoutDOMView {
     }
   }
 
-  save(name: string): void {
-    this.canvas_view.save(name)
+  to_blob(): Promise<Blob> {
+    return this.canvas_view.to_blob()
+  }
+
+  export(type: "png" | "svg", hidpi: boolean = true): CanvasLayer {
+    const output_backend = type == "png" ? "canvas" : "svg"
+    const composite = new CanvasLayer(output_backend, hidpi)
+
+    const {width, height} = this.layout.bbox
+    composite.resize(width, height)
+
+    const {canvas} = this.canvas_view.compose()
+    composite.ctx.drawImage(canvas, 0, 0)
+
+    return composite
   }
 
   serializable_state(): {[key: string]: unknown} {
