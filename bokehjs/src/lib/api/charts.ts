@@ -165,7 +165,7 @@ export function pie(data: PieChartData, opts: PieChartOpts = {}): Plot {
 
   const g2 = new Text({
     x: {field: "text_cx"}, y: {field: "text_cy"},
-    text: {field: opts.slice_labels || "labels"},
+    text: {field: opts.slice_labels ?? "labels"},
     angle: {field: "text_angles"},
     text_align: "center", text_baseline: "middle",
     text_color: {field: "text_colors"}, text_font_size: "12px",
@@ -178,9 +178,6 @@ export function pie(data: PieChartData, opts: PieChartOpts = {}): Plot {
   const xdr = new DataRange1d({renderers: [r1], range_padding: 0.2})
   const ydr = new DataRange1d({renderers: [r1], range_padding: 0.2})
   const plot = new Plot({x_range: xdr, y_range: ydr})
-
-  if (opts.width != null) plot.plot_width = opts.width
-  if (opts.height != null) plot.plot_height = opts.height
 
   plot.add_renderers(r1, r2)
 
@@ -323,9 +320,6 @@ export function bar(data: BarChartData, opts: BarChartOpts = {}): Plot {
   }
 
   const plot = new Plot({x_range: xdr, y_range: ydr, x_scale: xscale, y_scale: yscale})
-
-  if (opts.width != null) plot.plot_width = opts.width
-  if (opts.height != null) plot.plot_height = opts.height
 
   plot.add_renderers(...renderers)
   plot.add_layout(yaxis, "left")

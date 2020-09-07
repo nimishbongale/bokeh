@@ -50,13 +50,11 @@ export class PatchesView extends GlyphView {
   }
 
   protected _mask_data(): Indices {
-    const xr = this.renderer.plot_view.frame.x_range
-    const [x0, x1] = [xr.min, xr.max]
-
-    const yr = this.renderer.plot_view.frame.y_range
-    const [y0, y1] = [yr.min, yr.max]
-
-    return this.index.indices({x0, x1, y0, y1})
+    const {x_range, y_range} = this.renderer.plot_view.frame
+    return this.index.indices({
+      x0: x_range.min, x1: x_range.max,
+      y0: y_range.min, y1: y_range.max,
+    })
   }
 
   protected _inner_loop(ctx: Context2d, sx: Arrayable<number>, sy: Arrayable<number>, func: (this: Context2d) => void): void {
@@ -226,10 +224,10 @@ export class Patches extends Glyph {
   static init_Patches(): void {
     this.prototype.default_view = PatchesView
 
-    this.define<Patches.Props>({
+    this.define<Patches.Props>(({}) => ({
       xs: [ p.XCoordinateSeqSpec, {field: "xs"} ],
       ys: [ p.YCoordinateSeqSpec, {field: "ys"} ],
-    })
+    }))
     this.mixins<Patches.Mixins>([LineVector, FillVector, HatchVector])
   }
 }

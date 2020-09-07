@@ -479,7 +479,7 @@ export class ColorBarView extends AnnotationView {
   protected _format_major_labels(initial_labels: number[], major_ticks: Arrayable<number>): string[] {
     // XXX: passing null as cross_loc probably means MercatorTickFormatters, etc
     // will not function properly in conjunction with colorbars
-    const formatted_labels = this.model.formatter.doFormat(initial_labels, null as any)
+    const formatted_labels = this.model.formatter.doFormat(initial_labels, {loc: NaN})
 
     for (let i = 0, end = major_ticks.length; i < end; i++) {
       if (major_ticks[i] in this.model.major_label_overrides)
@@ -508,9 +508,7 @@ export class ColorBarView extends AnnotationView {
     const [i, j] = this._normals()
     const [start, end] = [this.model.color_mapper.metrics.min, this.model.color_mapper.metrics.max]
 
-    // XXX: passing null as cross_loc probably means MercatorTickers, etc
-    // will not function properly in conjunction with colorbars
-    const ticks = this.model.ticker.get_ticks(start, end, null, null, this.model.ticker.desired_num_ticks)
+    const ticks = this.model.ticker.get_ticks_no_defaults(start, end, NaN, this.model.ticker.desired_num_ticks)
 
     const majors = ticks.major
     const minors = ticks.minor
@@ -625,28 +623,28 @@ export class ColorBar extends Annotation {
       ["background_",  mixins.Fill],
     ])
 
-    this.define<ColorBar.Props>({
-      location:                [ p.Any,         'top_right' ],
-      orientation:             [ p.Orientation, 'vertical'  ],
-      title:                   [ p.String                   ],
-      title_standoff:          [ p.Number,      2           ],
-      width:                   [ p.Any,         'auto'      ],
-      height:                  [ p.Any,         'auto'      ],
-      scale_alpha:             [ p.Number,      1.0         ],
-      ticker:                  [ p.Instance,    () => new BasicTicker()        ],
-      formatter:               [ p.Instance,    () => new BasicTickFormatter() ],
-      major_label_overrides:   [ p.Any,         {}          ],
-      color_mapper:            [ p.Instance                 ],
-      label_standoff:          [ p.Number,      5           ],
-      margin:                  [ p.Number,      30          ],
-      padding:                 [ p.Number,      10          ],
-      major_tick_in:           [ p.Number,      5           ],
-      major_tick_out:          [ p.Number,      0           ],
-      minor_tick_in:           [ p.Number,      0           ],
-      minor_tick_out:          [ p.Number,      0           ],
-    })
+    this.define<ColorBar.Props>(({Alpha, Number, String, Tuple, Dict, Or, Ref, Auto}) => ({
+      location:              [ Or(LegendLocation, Tuple(Number, Number)), "top_right" ],
+      orientation:           [ Orientation, "vertical" ],
+      title:                 [ String ],
+      title_standoff:        [ Number, 2 ],
+      width:                 [ Or(Number, Auto), "auto" ],
+      height:                [ Or(Number, Auto), "auto" ],
+      scale_alpha:           [ Alpha, 1.0 ],
+      ticker:                [ Ref(ContinuousTicker), () => new BasicTicker() ],
+      formatter:             [ Ref(TickFormatter), () => new BasicTickFormatter() ],
+      major_label_overrides: [ Dict(String), {} ],
+      color_mapper:          [ Ref(ContinuousColorMapper) ],
+      label_standoff:        [ Number, 5 ],
+      margin:                [ Number, 30 ],
+      padding:               [ Number, 10 ],
+      major_tick_in:         [ Number, 5 ],
+      major_tick_out:        [ Number, 0 ],
+      minor_tick_in:         [ Number, 0 ],
+      minor_tick_out:        [ Number, 0 ],
+    }))
 
-    this.override({
+    this.override<ColorBar.Props>({
       background_fill_color: "#ffffff",
       background_fill_alpha: 0.95,
       bar_line_color: null,

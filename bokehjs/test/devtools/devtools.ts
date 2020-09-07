@@ -68,7 +68,7 @@ async function run_tests(): Promise<boolean> {
     try {
       function collect_trace(stackTrace: Protocol.Runtime.StackTrace): CallFrame[] {
         return stackTrace.callFrames.map(({functionName, url, lineNumber, columnNumber}) => {
-          return {name: functionName || "(anonymous)", url, line: lineNumber+1, col: columnNumber+1}
+          return {name: functionName ?? "(anonymous)", url, line: lineNumber+1, col: columnNumber+1}
         })
       }
 
@@ -76,7 +76,7 @@ async function run_tests(): Promise<boolean> {
         const {text, exception, url, lineNumber, columnNumber, stackTrace} = exceptionDetails
         return {
           text: exception != null && exception.description != null ? exception.description : text,
-          url: url || "(inline)",
+          url: url ?? "(inline)",
           line: lineNumber+1,
           col: columnNumber+1,
           trace: stackTrace ? collect_trace(stackTrace) : [],
@@ -124,7 +124,7 @@ async function run_tests(): Promise<boolean> {
       async function with_timeout<T>(promise: Promise<T>, wait: number): Promise<T | Timeout> {
         try {
           return await Promise.race([promise, timeout(wait)]) as T
-        } catch (err) {
+        } catch (err: unknown) {
           if (err instanceof TimeoutError) {
             return new Timeout()
           } else {
@@ -157,8 +157,10 @@ async function run_tests(): Promise<boolean> {
       await Network.enable()
       await Network.setCacheDisabled({cacheDisabled: true})
 
-      await Runtime.enable()
       await Page.enable()
+      await Page.navigate({url: "about:blank"})
+
+      await Runtime.enable()
       await Log.enable()
 
       async function override_metrics(dpr: number = 1): Promise<void> {
@@ -509,10 +511,12 @@ async function run_tests(): Promise<boolean> {
     } finally {
       await Runtime.discardConsoleEntries()
     }
-  } catch (err) {
+  } catch (error: unknown) {
     failure = true
-    if (!(err instanceof Exit))
-      console.error(`INTERNAL ERROR: ${err.stack ?? err}`)
+    if (!(error instanceof Exit)) {
+      const msg = error instanceof Error && error.stack ? error.stack : error
+      console.error(`INTERNAL ERROR: ${msg}`)
+    }
   } finally {
     if (client) {
       await client.close()

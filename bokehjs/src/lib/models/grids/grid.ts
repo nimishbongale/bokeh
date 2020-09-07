@@ -140,7 +140,7 @@ export class GridView extends GuideRendererView {
       return coords
     }
 
-    const ticks = ticker.get_ticks(start, end, range, cross_range.min, {})[location]
+    const ticks = ticker.get_ticks(start, end, range, cross_range.min)[location]
 
     const min = range.min
     const max = range.max
@@ -182,7 +182,7 @@ export namespace Grid {
     bounds: p.Property<[number, number] | "auto">
     dimension: p.Property<0 | 1>
     axis: p.Property<Axis>
-    ticker: p.Property<Ticker<any>>
+    ticker: p.Property<Ticker>
   } & Mixins
 
   export type Mixins =
@@ -219,14 +219,14 @@ export class Grid extends GuideRenderer {
       ["band_",       mixins.Hatch],
     ])
 
-    this.define<Grid.Props>({
-      bounds:       [ p.Any,     'auto'    ], // TODO (bev)
-      dimension:    [ p.Any,     0         ],
-      axis:         [ p.Instance           ],
-      ticker:       [ p.Instance           ],
-    })
+    this.define<Grid.Props>(({Number, Auto, Enum, Ref, Tuple, Or}) => ({
+      bounds:    [ Or(Tuple(Number, Number), Auto), "auto" ],
+      dimension: [ Enum(0, 1), 0 ],
+      axis:      [ Ref(Axis) ],
+      ticker:    [ Ref(Ticker) ],
+    }))
 
-    this.override({
+    this.override<Grid.Props>({
       level: "underlay",
       band_fill_color: null,
       band_fill_alpha: 0,
@@ -235,7 +235,7 @@ export class Grid extends GuideRenderer {
     })
   }
 
-  get_ticker(): Ticker<any> | null {
+  get_ticker(): Ticker | null {
     if (this.ticker != null) {
       return this.ticker
     }

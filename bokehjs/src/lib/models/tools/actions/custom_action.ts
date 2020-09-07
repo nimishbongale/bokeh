@@ -15,8 +15,7 @@ export class CustomActionView extends ActionToolView {
   model: CustomAction
 
   doit(): void {
-    if (this.model.callback != null)
-      this.model.callback.execute(this.model)
+    this.model.callback?.execute(this.model)
   }
 }
 
@@ -43,11 +42,11 @@ export class CustomAction extends ActionTool {
   static init_CustomAction(): void {
     this.prototype.default_view = CustomActionView
 
-    this.define<CustomAction.Props>({
-      action_tooltip: [ p.String, 'Perform a Custom Action'],
-      callback:       [ p.Any                              ], // TODO: p.Either(p.Instance(Callback), p.Function) ]
-      icon:           [ p.String                           ],
-    })
+    this.define<CustomAction.Props>(({Any, String, Nullable}) => ({
+      action_tooltip: [ String, "Perform a Custom Action" ],
+      callback:       [ Nullable(Any /*TODO*/) ],
+      icon:           [ String ],
+    }))
   }
 
   tool_name = "Custom Action"

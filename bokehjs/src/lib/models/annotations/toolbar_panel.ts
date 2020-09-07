@@ -6,11 +6,9 @@ import {div, empty, position, display, undisplay, remove} from "core/dom"
 import {Size} from "core/layout"
 import {BBox} from "core/util/bbox"
 import * as p from "core/properties"
-import {SidePanel} from "core/layout/side_panel"
 
 export class ToolbarPanelView extends AnnotationView {
   model: ToolbarPanel
-  panel: SidePanel
 
   readonly rotate: boolean = true
 
@@ -24,6 +22,7 @@ export class ToolbarPanelView extends AnnotationView {
   }
 
   async lazy_initialize(): Promise<void> {
+    await super.lazy_initialize()
     this._toolbar_view = await build_view(this.model.toolbar, {parent: this}) as ToolbarBaseView
     this.plot_view.visibility_callbacks.push((visible) => this._toolbar_view.set_visibility(visible))
   }
@@ -46,7 +45,7 @@ export class ToolbarPanelView extends AnnotationView {
 
   protected _render(): void {
     // TODO: this should be handled by the layout
-    const {bbox} = this.panel
+    const {bbox} = this.panel!
     if (!this._previous_bbox.equals(bbox)) {
       position(this.el, bbox)
       this._previous_bbox = bbox
@@ -94,8 +93,8 @@ export class ToolbarPanel extends Annotation {
   static init_ToolbarPanel(): void {
     this.prototype.default_view = ToolbarPanelView
 
-    this.define<ToolbarPanel.Props>({
-      toolbar: [ p.Instance ],
-    })
+    this.define<ToolbarPanel.Props>(({Ref}) => ({
+      toolbar: [ Ref(Toolbar) ],
+    }))
   }
 }

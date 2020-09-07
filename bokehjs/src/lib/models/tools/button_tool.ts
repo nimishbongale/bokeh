@@ -21,7 +21,7 @@ import type {ToolbarBaseView} from "./toolbar_base"
 
 export abstract class ButtonToolButtonView extends DOMView {
   model: ButtonTool
-  parent: ToolbarBaseView
+  readonly parent: ToolbarBaseView
 
   private _hammer: InstanceType<typeof Manager>
   private _menu?: ContextMenu
@@ -130,9 +130,9 @@ export abstract class ButtonTool extends Tool {
   }
 
   static init_ButtonTool(): void {
-    this.internal({
-      disabled: [ p.Boolean, false ],
-    })
+    this.internal<ButtonTool.Props>(({Boolean}) => ({
+      disabled: [ Boolean, false ],
+    }))
   }
 
   tool_name: string

@@ -504,6 +504,8 @@ class Plot(LayoutDOM):
     A list of renderers to occupy the center area (frame) of the plot.
     """)
 
+    width = Override(default=600)
+
     plot_width = Int(600, help="""
     The outer width of a plot, including any axes, titles, border padding, etc.
 
@@ -511,6 +513,8 @@ class Plot(LayoutDOM):
         This corresponds directly to the width of the HTML canvas.
 
     """)
+
+    height = Override(default=600)
 
     plot_height = Int(600, help="""
     The outer height of a plot, including any axes, titles, border padding, etc.

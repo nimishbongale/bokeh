@@ -264,7 +264,7 @@ export class Linker {
     return this.shims.has(dep)
   }
 
-  link(): Bundle[] {
+  async link(): Promise<Bundle[]> {
     const [entries] = this.resolve(this.entries)
     const [main, ...plugins] = entries
 
@@ -295,6 +295,15 @@ export class Linker {
       const remove_use_strict = transforms.remove_use_strict()
       transformers.push(remove_use_strict)
 
+      const fix_esmodule = transforms.fix_esmodule()
+      transformers.push(fix_esmodule)
+
+      const remove_void0 = transforms.remove_void0()
+      transformers.push(remove_void0)
+
+      const fix_esexports = transforms.fix_esexports()
+      transformers.push(fix_esexports)
+
       const rewrite_deps = transforms.rewrite_deps((dep) => {
         const module_dep = module.dependencies.get(dep)
         return module_dep != null ? module_dep.id : undefined
@@ -306,7 +315,7 @@ export class Linker {
     }
 
     const print = (module: ModuleInfo): string => {
-      let ast = module.ast || this.parse_module(module)
+      let ast = module.ast ?? this.parse_module(module)
       ast = transforms.apply(ast, ...transformers(module))
       const source = transforms.print_es(ast)
       return convert.removeMapFileComments(source)
@@ -324,31 +333,33 @@ export class Linker {
       return false
     }
 
-    const artifacts = (modules: ModuleInfo[]) => {
-      return modules.map((module) => {
+    const artifacts = async (modules: ModuleInfo[]) => {
+      const result = []
+      for (const module of modules) {
         const cached = this.cache.get(module.file)
 
         let code: ModuleCode
         if (module.changed || (cached != null && deps_changed(module, cached.module))) {
           const source = print(module)
           const ecma = this.target == "ES2020" ? 2020 : (this.target == "ES2017" ? 2017 : 5)
-          const minified = this.minify ? minify(module, source, ecma) : {min_source: source}
+          const minified = this.minify ? await minify(module, source, ecma) : {min_source: source}
           code = {source, ...minified}
         } else
           code = cached!.code
 
-        return {module, code}
-      })
+        result.push({module, code})
+      }
+      return result
     }
 
     const main_prelude = !this.plugin ? this.prelude : this.plugin_prelude
     const main_assembly = !this.plugin ? dense_assembly : sparse_assembly
 
-    const main_bundle = new Bundle(main, artifacts(main_modules), this.builtins, main_prelude, main_assembly)
+    const main_bundle = new Bundle(main, await artifacts(main_modules), this.builtins, main_prelude, main_assembly)
 
     const plugin_bundles: Bundle[] = []
     for (let j = 0; j < plugins.length; j++) {
-      const plugin_bundle = new Bundle(plugins[j], artifacts(plugin_modules[j]), this.builtins, this.plugin_prelude, sparse_assembly)
+      const plugin_bundle = new Bundle(plugins[j], await artifacts(plugin_modules[j]), this.builtins, this.plugin_prelude, sparse_assembly)
       plugin_bundles.push(plugin_bundle)
     }
 
@@ -407,11 +418,12 @@ export class Linker {
 
     const artifacts = []
     for (const artifact of this.cache.values()) {
-      const module = {...artifact.module}
-
-      delete module.changed
-      delete module.ast
-      delete module.dependencies
+      const module = {
+        ...artifact.module,
+        changed: undefined,
+        ast: undefined,
+        dependencies: undefined,
+      }
 
       artifacts.push({
         module: {
@@ -474,7 +486,7 @@ export class Linker {
     const json_file = path + ".json"
     const has_js_file = file_exists(js_file)
     const has_json_file = file_exists(json_file)
-    const has_file = has_js_file || has_json_file
+    const has_file = has_js_file ?? has_json_file
 
     if (directory_exists(path)) {
       const pkg_file = this.resolve_package(path)
@@ -775,14 +787,14 @@ export function transpile(file: Path, source: string, target: ts.ScriptTarget,
   }
 }
 
-export function minify(module: ModuleInfo, source: string, ecma: terser.ECMA): {min_source: string, min_map?: string} {
+export async function minify(module: ModuleInfo, source: string, ecma: terser.ECMA): Promise<{min_source: string, min_map?: string}> {
   const name = basename(module.file)
   const min_js = rename(name, {ext: '.min.js'})
   const min_js_map = rename(name, {ext: '.min.js.map'})
 
   const minify_opts: terser.MinifyOptions = {
     ecma,
-    output: {
+    format: {
       comments: /^!|copyright|license|\(c\)/i,
     },
     sourceMap: {
@@ -791,12 +803,13 @@ export function minify(module: ModuleInfo, source: string, ecma: terser.ECMA): {
     },
   }
 
-  const {code, map, error} = terser.minify(source, minify_opts)
-
-  if (error != null) {
-    const {message, line, col} = error as any
-    throw new BuildError("linker", `${module.file}:${line-1}:${col}: ${message}`)
+  try {
+    const {code, map} = await terser.minify(source, minify_opts)
+    return {
+      min_source: code ?? "",
+      min_map: typeof map === "string" ? map : undefined,
+    }
+  } catch (error: unknown) {
+    throw new BuildError("linker", `${error}`)
   }
-
-  return {min_source: code || "", min_map: typeof map === "string" ? map : undefined}
 }

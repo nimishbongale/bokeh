@@ -32,7 +32,7 @@ function indentFormatter(formatter?: Formatter<Item>, indent?: number): Formatte
   return (row: number, cell: number, value: unknown, columnDef: Column<Item>, dataContext: Item) => {
     const spacer = span({
       class: 'slick-group-toggle',
-      style: { 'margin-left': `${(indent || 0) * 15}px`},
+      style: { 'margin-left': `${(indent ?? 0) * 15}px`},
     })
     const formatted = formatter ? formatter(row, cell, value, columnDef, dataContext) : `${value}`
 
@@ -76,11 +76,11 @@ export class GroupingInfo extends Model {
   }
 
   static init_GroupingInfo(): void {
-    this.define<GroupingInfo.Props>({
-      getter:      [ p.String,   ''    ],
-      aggregators: [ p.Array,    []    ],
-      collapsed:   [ p.Boolean,  false ],
-    })
+    this.define<GroupingInfo.Props>(({Boolean, String, Array, Ref}) => ({
+      getter:      [ String, "" ],
+      aggregators: [ Array(Ref(RowAggregator)), [] ],
+      collapsed:   [ Boolean, false ],
+    }))
   }
 
   get comparer(): (a: { value: any }, b: { value: any }) => number {
@@ -328,9 +328,9 @@ export class DataCube extends DataTable {
   static init_DataCube(): void {
     this.prototype.default_view = DataCubeView
 
-    this.define<DataCube.Props>({
-      grouping: [p.Array,   []],
-      target:   [p.Instance   ],
-    })
+    this.define<DataCube.Props>(({Array, Ref}) => ({
+      grouping: [ Array(Ref(GroupingInfo)), [] ],
+      target:   [ Ref(ColumnDataSource) ],
+    }))
   }
 }

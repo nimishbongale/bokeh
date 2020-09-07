@@ -1,20 +1,26 @@
 import {display, fig, row, column, grid} from "./utils"
 
 import {
-  Arrow, ArrowHead, NormalHead, BoxAnnotation, Legend, LegendItem,
+  Arrow, ArrowHead, NormalHead, BoxAnnotation, LabelSet, Legend, LegendItem,
   Range1d, DataRange1d, FactorRange,
   ColumnDataSource, CDSView, BooleanFilter, Selection,
   LinearAxis, CategoricalAxis,
 } from "@bokehjs/models"
 
+import {MultiChoice} from "@bokehjs/models/widgets"
+
 import {Factor} from "@bokehjs/models/ranges/factor_range"
 
 import {Color} from "@bokehjs/core/types"
-import {Anchor, Location, OutputBackend} from "@bokehjs/core/enums"
+import {Anchor, Location, OutputBackend, MarkerType} from "@bokehjs/core/enums"
 import {subsets} from "@bokehjs/core/util/iterator"
+import {assert} from "@bokehjs/core/util/assert"
 import {range} from "@bokehjs/core/util/array"
 import {Random} from "@bokehjs/core/util/random"
 import {Matrix} from "@bokehjs/core/util/data_structures"
+import {Figure, MarkerArgs} from "@bokehjs/api/plotting"
+
+const n_marker_types = [...MarkerType].length
 
 function svg_image(svg: string): string {
   return `data:image/svg+xml;utf-8,${svg}`
@@ -354,6 +360,155 @@ describe("Bug", () => {
       const p1 = make_plot("svg")
 
       await display(row([p0, p1]), [450, 250])
+    })
+  })
+
+  describe("in issue #10454", () => {
+    it("disallows using categorical coordinates with LabelSet annotation", async () => {
+      const p = fig([300, 300], {x_range: ["X1", "X2", "X3"], y_range: ["Y1", "Y2", "Y3"]})
+      p.rect({x: ["X1", "X2", "X3"], y: ["Y1", "Y2", "Y3"], width: 1, height: 1, fill_alpha: 0.3})
+
+      const labels0 = new LabelSet({x: {value: "X1"}, y: {value: "Y3"}, text: {value: "L0"}, text_color: "red"})
+      p.add_layout(labels0)
+
+      const labels1 = new LabelSet({x: {value: "X3"}, y: {value: "Y1"}, text: {value: "L1"}, text_color: "green"})
+      p.add_layout(labels1)
+
+      const source = new ColumnDataSource({data: {
+        x: ["X1", "X2", "X3"],
+        y: ["Y1", "Y2", "Y3"],
+        text: ["L20", "L21", "L22"],
+      }})
+      const labels2 = new LabelSet({x: {field: "x"}, y: {field: "y"}, text: {field: "text"}, source, text_color: "blue"})
+      p.add_layout(labels2)
+
+      await display(p, [350, 350])
+    })
+
+    it("disallows using categorical coordinates with Arrow annotation", async () => {
+      const p = fig([300, 300], {x_range: ["X1", "X2", "X3"], y_range: ["Y1", "Y2", "Y3"]})
+      p.rect({x: ["X1", "X2", "X3"], y: ["Y1", "Y2", "Y3"], width: 1, height: 1, fill_alpha: 0.3})
+
+      const arrow0 = new Arrow({
+        x_start: {value: "X1"}, y_start: {value: "Y1"},
+        x_end: {value: "X3"}, y_end: {value: "Y3"},
+        line_color: "red",
+      })
+      p.add_layout(arrow0)
+      const arrow1 = new Arrow({
+        x_start: {value: "X3"}, y_start: {value: "Y1"},
+        x_end: {value: "X1"}, y_end: {value: "Y3"},
+        line_color: "green",
+      })
+      p.add_layout(arrow1)
+
+      const source = new ColumnDataSource({data: {
+        x_start: ["X2", "X2", "X2", "X2"],
+        y_start: ["Y2", "Y2", "Y2", "Y2"],
+        x_end: ["X3", "X2", "X1", "X2"],
+        y_end: ["Y2", "Y3", "Y2", "Y1"],
+      }})
+      const labels2 = new Arrow({
+        x_start: {field: "x_start"},
+        y_start: {field: "y_start"},
+        x_end: {field: "x_end"},
+        y_end: {field: "y_end"},
+        source,
+        line_color: "blue",
+      })
+      p.add_layout(labels2)
+
+      await display(p, [350, 350])
+    })
+  })
+
+  describe("in issue #10457", () => {
+    it("prevents rendering circle glyph with reversed ranges and radius in data units", async () => {
+      function plot(x_range: [number, number], y_range: [number, number]) {
+        const title = `[${x_range}] × [${y_range}]`
+        const p = fig([150, 150], {x_range, y_range, title})
+        p.circle({
+          x: [0, 50, 100], y: [0, 50, 100], radius: {value: 20},
+          fill_color: ["red", "green", "blue"],
+          line_color: "black",
+          alpha: 0.5,
+        })
+        return p
+      }
+
+      const p1 = plot([0, 100], [0, 100])
+      const p2 = plot([100, 0], [0, 100])
+      const p3 = plot([0, 100], [100, 0])
+      const p4 = plot([100, 0], [100, 0])
+
+      const layout = row([p1, p2, p3, p4])
+      await display(layout, [4*150 + 50, 150 + 50])
+    })
+
+    it("prevents rendering marker glyphs with reversed ranges", async () => {
+      type MarkerFn = (p: Figure) => (args: Partial<MarkerArgs>) => void
+
+      function plot(fn: MarkerFn, x_range: [number, number], y_range: [number, number]) {
+        const p = fig([100, 50], {x_range, y_range, x_axis_type: null, y_axis_type: null})
+        fn(p)({
+          x: [0, 50, 100], y: [0, 50, 100], size: {value: 30},
+          fill_color: ["red", "green", "blue"],
+          line_color: "black",
+          alpha: 0.5,
+        })
+        return p
+      }
+
+      function plots(fn: MarkerFn) {
+        const p1 = plot(fn, [0, 100], [0, 100])
+        const p2 = plot(fn, [100, 0], [0, 100])
+        const p3 = plot(fn, [0, 100], [100, 0])
+        const p4 = plot(fn, [100, 0], [100, 0])
+        return [p1, p2, p3, p4]
+      }
+
+      const fns: MarkerFn[] = [
+        (p) => p.asterisk.bind(p),
+        (p) => p.circle.bind(p),
+        (p) => p.circle_cross.bind(p),
+        (p) => p.circle_dot.bind(p),
+        (p) => p.circle_x.bind(p),
+        (p) => p.circle_y.bind(p),
+        (p) => p.cross.bind(p),
+        (p) => p.dash.bind(p),
+        (p) => p.diamond.bind(p),
+        (p) => p.diamond_cross.bind(p),
+        (p) => p.diamond_dot.bind(p),
+        (p) => p.dot.bind(p),
+        (p) => p.hex.bind(p),
+        (p) => p.hex_dot.bind(p),
+        (p) => p.inverted_triangle.bind(p),
+        (p) => p.plus.bind(p),
+        (p) => p.square.bind(p),
+        (p) => p.square_cross.bind(p),
+        (p) => p.square_dot.bind(p),
+        (p) => p.square_pin.bind(p),
+        (p) => p.square_x.bind(p),
+        (p) => p.triangle.bind(p),
+        (p) => p.triangle_dot.bind(p),
+        (p) => p.triangle_pin.bind(p),
+        (p) => p.x.bind(p),
+        (p) => p.y.bind(p),
+      ]
+
+      assert(fns.length == n_marker_types)
+
+      const layout = column(fns.map((fn) => row(plots(fn))))
+      await display(layout, [450, fns.length*50 + 50])
+    })
+  })
+
+  describe("in issue #10452", () => {
+    it("prevents changing MultiChoice.disabled property", async () => {
+      const widget = new MultiChoice({options: ["1", "2", "3"], width: 100, height: 20})
+      const {view} = await display(widget, [100, 20])
+      widget.disabled = true
+      await view.ready
     })
   })
 })

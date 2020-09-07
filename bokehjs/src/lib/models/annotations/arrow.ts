@@ -23,8 +23,6 @@ export class ArrowView extends AnnotationView {
 
   initialize(): void {
     super.initialize()
-    if (this.model.source == null)
-      this.model.source = new ColumnDataSource()
     this.set_data(this.model.source)
   }
 
@@ -135,12 +133,12 @@ export namespace Arrow {
   export type Attrs = p.AttrsOf<Props>
 
   export type Props = Annotation.Props & {
-    x_start: p.NumberSpec
-    y_start: p.NumberSpec
+    x_start: p.XCoordinateSpec
+    y_start: p.YCoordinateSpec
     start_units: p.Property<SpatialUnits>
     start: p.Property<ArrowHead | null>
-    x_end: p.NumberSpec
-    y_end: p.NumberSpec
+    x_end: p.XCoordinateSpec
+    y_end: p.YCoordinateSpec
     end_units: p.Property<SpatialUnits>
     end: p.Property<ArrowHead | null>
     source: p.Property<ColumnarDataSource>
@@ -166,16 +164,16 @@ export class Arrow extends Annotation {
 
     this.mixins<Arrow.Mixins>(LineVector)
 
-    this.define<Arrow.Props>({
-      x_start:      [ p.NumberSpec                           ],
-      y_start:      [ p.NumberSpec                           ],
-      start_units:  [ p.SpatialUnits, 'data'                 ],
-      start:        [ p.Instance,     null                   ],
-      x_end:        [ p.NumberSpec                           ],
-      y_end:        [ p.NumberSpec                           ],
-      end_units:    [ p.SpatialUnits, 'data'                 ],
-      end:          [ p.Instance,     () => new OpenHead({}) ],
-      source:       [ p.Instance                             ],
-    })
+    this.define<Arrow.Props>(({Ref, Nullable}) => ({
+      x_start:     [ p.XCoordinateSpec ],
+      y_start:     [ p.YCoordinateSpec ],
+      start_units: [ SpatialUnits, "data" ],
+      start:       [ Nullable(Ref(ArrowHead)), null ],
+      x_end:       [ p.XCoordinateSpec ],
+      y_end:       [ p.YCoordinateSpec ],
+      end_units:   [ SpatialUnits, "data" ],
+      end:         [ Nullable(Ref(ArrowHead)), () => new OpenHead() ],
+      source:      [ Ref(ColumnarDataSource), () => new ColumnDataSource() ],
+    }))
   }
 }

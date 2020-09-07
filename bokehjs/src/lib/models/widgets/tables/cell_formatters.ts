@@ -7,6 +7,7 @@ import {div, i} from "core/dom"
 import {Color} from "core/types"
 import {FontStyle, TextAlign, RoundingFunction} from "core/enums"
 import {isString} from "core/util/types"
+import {to_fixed} from "core/util/string"
 import {Model} from "../../../model"
 
 export namespace CellFormatter {
@@ -52,11 +53,11 @@ export class StringFormatter extends CellFormatter {
   }
 
   static init_StringFormatter(): void {
-    this.define<StringFormatter.Props>({
-      font_style: [ p.FontStyle, "normal" ],
-      text_align: [ p.TextAlign, "left"   ],
-      text_color: [ p.Color ],
-    })
+    this.define<StringFormatter.Props>(({Color}) => ({
+      font_style: [ FontStyle, "normal" ],
+      text_align: [ TextAlign, "left"   ],
+      text_color: [ Color               ],
+    }))
   }
 
   doFormat(_row: any, _cell: any, value: any, _columnDef: any, _dataContext: any): string {
@@ -85,7 +86,7 @@ export namespace ScientificFormatter {
   export type Attrs = p.AttrsOf<Props>
 
   export type Props = StringFormatter.Props & {
-    nan_format: p.Property<string>
+    nan_format: p.Property<string | null>
     precision: p.Property<number>
     power_limit_high: p.Property<number>
     power_limit_low: p.Property<number>
@@ -102,12 +103,12 @@ export class ScientificFormatter extends StringFormatter {
   }
 
   static init_ScientificFormatter(): void {
-    this.define<ScientificFormatter.Props>({
-      nan_format:       [ p.String ],
-      precision:        [ p.Number,  10     ],
-      power_limit_high: [ p.Number,  5      ],
-      power_limit_low:  [ p.Number,  -3     ],
-    })
+    this.define<ScientificFormatter.Props>(({Number, String, Nullable}) => ({
+      nan_format:       [ Nullable(String), null ],
+      precision:        [ Number, 10 ],
+      power_limit_high: [ Number, 5 ],
+      power_limit_low:  [ Number, -3 ],
+    }))
   }
 
   get scientific_limit_low(): number {
@@ -129,11 +130,10 @@ export class ScientificFormatter extends StringFormatter {
 
     if ((value == null || isNaN(value)) && this.nan_format != null)
       value = this.nan_format
-    else if (need_sci) {
+    else if (need_sci)
       value = value.toExponential(precision)
-    } else {
-      value = value.toFixed(precision).replace(/(\.[0-9]*?)0+$/, "$1").replace(/\.$/, "")
-    }
+    else
+      value = to_fixed(value, precision)
 
     // add StringFormatter formatting
     return super.doFormat(row, cell, value, columnDef, dataContext)
@@ -146,8 +146,8 @@ export namespace NumberFormatter {
   export type Props = StringFormatter.Props & {
     format: p.Property<string>
     language: p.Property<string>
-    nan_format: p.Property<string>
     rounding: p.Property<RoundingFunction>
+    nan_format: p.Property<string | null>
   }
 }
 
@@ -162,12 +162,12 @@ export class NumberFormatter extends StringFormatter {
 
   static init_NumberFormatter(): void {
 
-    this.define<NumberFormatter.Props>({
-      format:    [ p.String,           '0,0'   ], // TODO (bev)
-      language:  [ p.String,           'en'    ], // TODO (bev)
-      rounding:  [ p.RoundingFunction, 'round' ], // TODO (bev)
-      nan_format: [ p.String ],
-    })
+    this.define<NumberFormatter.Props>(({String, Nullable}) => ({
+      format:     [ String,           "0,0"   ],
+      language:   [ String,           "en"    ],
+      rounding:   [ RoundingFunction, "round" ],
+      nan_format: [ Nullable(String), null    ],
+    }))
   }
 
   doFormat(row: any, cell: any, value: any, columnDef: any, dataContext: any): string {
@@ -206,9 +206,9 @@ export class BooleanFormatter extends CellFormatter {
 
   static init_BooleanFormatter(): void {
 
-    this.define<BooleanFormatter.Props>({
-      icon: [ p.String, 'check' ],
-    })
+    this.define<BooleanFormatter.Props>(({String}) => ({
+      icon: [ String, "check" ],
+    }))
   }
 
   doFormat(_row: any, _cell: any, value: any, _columnDef: any, _dataContext: any): string {
@@ -221,7 +221,7 @@ export namespace DateFormatter {
 
   export type Props = StringFormatter.Props & {
     format: p.Property<string> // XXX: enum
-    nan_format: p.Property<string>
+    nan_format: p.Property<string | null>
   }
 }
 
@@ -236,10 +236,10 @@ export class DateFormatter extends StringFormatter {
 
   static init_DateFormatter(): void {
 
-    this.define<DateFormatter.Props>({
-      format: [ p.String, 'ISO-8601' ],
-      nan_format: [ p.String ],
-    })
+    this.define<DateFormatter.Props>(({String, Nullable}) => ({
+      format:     [ String,           "ISO-8601" ],
+      nan_format: [ Nullable(String), null       ],
+    }))
   }
 
   getFormat(): string | undefined {
@@ -301,9 +301,9 @@ export class HTMLTemplateFormatter extends CellFormatter {
 
   static init_HTMLTemplateFormatter(): void {
 
-    this.define<HTMLTemplateFormatter.Props>({
-      template: [ p.String, '<%= value %>' ],
-    })
+    this.define<HTMLTemplateFormatter.Props>(({String}) => ({
+      template: [ String, '<%= value %>' ],
+    }))
   }
 
   doFormat(_row: any, _cell: any, value: any, _columnDef: any, dataContext: any): string {

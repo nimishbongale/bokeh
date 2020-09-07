@@ -121,13 +121,11 @@ export class MultiPolygonsView extends GlyphView {
   }
 
   protected _mask_data(): Indices {
-    const xr = this.renderer.plot_view.frame.x_range
-    const [x0, x1] = [xr.min, xr.max]
-
-    const yr = this.renderer.plot_view.frame.y_range
-    const [y0, y1] = [yr.min, yr.max]
-
-    return this.index.indices({x0, x1, y0, y1})
+    const {x_range, y_range} = this.renderer.plot_view.frame
+    return this.index.indices({
+      x0: x_range.min, x1: x_range.max,
+      y0: y_range.min, y1: y_range.max,
+    })
   }
 
   protected _inner_loop(ctx: Context2d, sx: NumberArray[][], sy: NumberArray[][]): void {
@@ -331,10 +329,10 @@ export class MultiPolygons extends Glyph {
   static init_MultiPolygons(): void {
     this.prototype.default_view = MultiPolygonsView
 
-    this.define<MultiPolygons.Props>({
+    this.define<MultiPolygons.Props>(({}) => ({
       xs: [ p.XCoordinateSeqSeqSeqSpec, {field: "xs"} ],
       ys: [ p.YCoordinateSeqSeqSeqSpec, {field: "ys"} ],
-    })
+    }))
     this.mixins<MultiPolygons.Mixins>([LineVector, FillVector, HatchVector])
   }
 }

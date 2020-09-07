@@ -211,6 +211,8 @@ export class PlotView extends LayoutDOMView {
   }
 
   async lazy_initialize(): Promise<void> {
+    await super.lazy_initialize()
+
     this.canvas_view = await build_view(this.canvas, {parent: this})
     this.ui_event_bus = new UIEvents(this, this.model.toolbar, this.canvas_view.events_el)
 
@@ -643,10 +645,10 @@ export class PlotView extends LayoutDOMView {
     if (min_interval != null || max_interval != null) {
       const old_interval = Math.abs(rng.end - rng.start)
       const new_interval = Math.abs(range_info.end - range_info.start)
-      if (min_interval > 0 && new_interval < min_interval) {
+      if (min_interval != null && min_interval > 0 && new_interval < min_interval) {
         weight = (old_interval - min_interval) / (old_interval - new_interval)
       }
-      if (max_interval > 0 && new_interval > max_interval) {
+      if (max_interval != null && max_interval > 0 && new_interval > max_interval) {
         weight = (max_interval - old_interval) / (new_interval - old_interval)
       }
       weight = Math.max(0.0, Math.min(1.0, weight))
@@ -743,9 +745,6 @@ export class PlotView extends LayoutDOMView {
     for (const [, range] of y_ranges) {
       this.connect(range.change, () => {this._needs_layout = true; this.request_paint()})
     }
-
-    const {plot_width, plot_height} = this.model.properties
-    this.on_change([plot_width, plot_height], () => this.invalidate_layout())
 
     const {above, below, left, right, center, renderers} = this.model.properties
     this.on_change([above, below, left, right, center, renderers], async () => await this.build_renderer_views())

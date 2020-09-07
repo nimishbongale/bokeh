@@ -237,7 +237,7 @@ export class CanvasView extends DOMView {
       const {gl, canvas} = webgl
       gl.viewport(0, 0, canvas.width, canvas.height)
       gl.clearColor(0, 0, 0, 0)
-      gl.clear(gl.COLOR_BUFFER_BIT || gl.DEPTH_BUFFER_BIT)
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
     }
   }
 
@@ -298,9 +298,9 @@ export class Canvas extends HasProps {
   static init_Canvas(): void {
     this.prototype.default_view = CanvasView
 
-    this.internal({
-      hidpi:          [ p.Boolean,       true     ],
-      output_backend: [ p.OutputBackend, "canvas" ],
-    })
+    this.internal<Canvas.Props>(({Boolean}) => ({
+      hidpi:          [ Boolean, true ],
+      output_backend: [ OutputBackend, "canvas" ],
+    }))
   }
 }
